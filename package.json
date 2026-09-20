@@ -17,7 +17,15 @@
     "edge"
   ],
   "license": "MIT",
-  "author": "rsc-cache contributors",
+  "author": "modeusweb <modeusweb@gmail.com> (https://github.com/modeusweb)",
+  "homepage": "https://github.com/modeusweb/rsc-cache#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/modeusweb/rsc-cache.git"
+  },
+  "bugs": {
+    "url": "https://github.com/modeusweb/rsc-cache/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "engines": {
@@ -80,6 +88,7 @@
     "bench": "npx -y tsx benchmarks/bench.ts",
     "check:exports": "publint",
     "pack:dry": "npm pack --dry-run",
+    "prepublishOnly": "npm run verify",
     "verify": "npm run typecheck && npm run lint && npm run test && npm run build && publint"
   },
   "peerDependencies": {
