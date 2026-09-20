@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+*.log
+.DS_Store
+.rsc-cache/
+rsc-cache-*.tgz
+.vercel
+bench-out.txt
+pack-out.txt
+pub-out.txt
+test-out.txt

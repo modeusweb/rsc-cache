@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "env": {
+    "es2024": true
+  },
+  "ignorePatterns": ["dist/**", "coverage/**", "node_modules/**"],
+  "rules": {
+    "no-console": "off",
+    "no-underscore-dangle": "off",
+    "unicorn/prefer-node-protocol": "off",
+    "typescript/no-explicit-any": "off",
+    "eslint/no-await-in-loop": "off",
+    "unicorn/no-useless-spread": "off",
+    "unicorn/no-useless-fallback-in-spread": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "unicorn/no-array-sort": "off",
+    "typescript/no-extraneous-class": "off"
+  }
+}
