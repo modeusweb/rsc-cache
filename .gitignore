@@ -11,3 +11,4 @@ bench-out.txt
 pack-out.txt
 pub-out.txt
 test-out.txt
+.npmrc
