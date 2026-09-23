@@ -330,6 +330,21 @@ function help(): void {
   );
 }
 
+/** Reads the package version next to the entry point (never hard-coded). */
+async function readVersion(): Promise<string> {
+  try {
+    const pkg = JSON.parse(
+      await readFile(new URL("../package.json", import.meta.url), "utf8"),
+    ) as { version?: string };
+    if (typeof pkg.version === "string" && pkg.version.length > 0) {
+      return pkg.version;
+    }
+  } catch {
+    // Report "unknown" rather than a wrong, hard-coded version.
+  }
+  return "unknown";
+}
+
 async function main(): Promise<void> {
   const command = process.argv[2] ?? "doctor";
   switch (command) {
@@ -338,7 +353,7 @@ async function main(): Promise<void> {
       return;
     case "--version":
     case "-v":
-      process.stdout.write("rsc-cache 0.1.0\n");
+      process.stdout.write(`rsc-cache ${await readVersion()}\n`);
       return;
     case "--help":
     case "-h":

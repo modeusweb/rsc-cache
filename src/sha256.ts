@@ -7,7 +7,7 @@
  * and not always present; a 32-bit FNV hash is not collision resistant enough
  * for a shared cache namespace. SHA-256 in ~90 lines solves all three.
  *
- * Verified against NIST test vectors in `tests/hash.test.ts`.
+ * Verified against NIST test vectors in `tests/keys.test.ts`.
  */
 
 const K = new Uint32Array([

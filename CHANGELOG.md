@@ -3,6 +3,24 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+## [0.2.0] — 2026-09-23
+
+### Fixed
+
+- Entries written with a different serializer are now dropped from storage, so the next call recaches the value instead of failing compare-and-set forever (serializer mismatch no longer "sticks" until TTL expiry).
+- The Redis adapter now reconciles tag bookkeeping on every write: rewriting an entry without tags removes its stale memberships from the previous tag indexes (Lua and read-modify-write paths).
+- `maxKeyLength` is now a hard limit: oversized keys are always trimmed to the configured budget, even when the structural head alone exceeds it.
+- `prefetchDetailed` distinguishes a stored `undefined` (`cacheNull`) from a cache miss and no longer re-runs the source for warm entries.
+- Raw instance operations (`get`, `set`, `has`, `delete`) honor the configured `timeouts.read` / `timeouts.write`.
+
+### Changed
+
+- `rsc-cache-invalidate-tag` deletes members in batches of 500, staying below the Lua stack argument limit for large tags.
+- Redis `deleteMany` batches `SREM` calls against the namespace key index.
+- `rsc-cache --version` reads the version from `package.json` instead of a hard-coded string.
+
 ## [0.1.0] — 2026-09-20
 
 Initial release.

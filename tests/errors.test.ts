@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createCache } from "../src/create-cache.js";
-import { CacheConfigurationError, CacheError } from "../src/errors.js";
+import {
+  CacheConfigurationError,
+  CacheError,
+  CacheTimeoutError,
+} from "../src/errors.js";
 import { jsonSerializer } from "../src/serializer.js";
 import { createMockStorage, createTestCache, getEntryInfo } from "../src/testing/index.js";
 import { decodeUtf8, encodeUtf8 } from "../src/bytes.js";
@@ -34,6 +38,15 @@ describe("timeouts", () => {
     const get = cache.cache(async (id: string) => `value-${id}`, { ttl: "1m" });
 
     await expect(get("1")).rejects.toThrowError(/Cache read failed/);
+    await cache.dispose();
+  });
+
+  it("applies the read timeout to raw instance reads", async () => {
+    const storage = createMockStorage({ latencyMs: 30 });
+    const { cache } = createTestCache({ storage, timeouts: { read: "5ms" } });
+
+    await expect(cache.get("missing")).rejects.toThrowError(CacheTimeoutError);
+    await expect(cache.has("missing")).rejects.toThrowError(CacheTimeoutError);
     await cache.dispose();
   });
 
@@ -103,6 +116,10 @@ describe("serialization failures", () => {
     await withAlt("1");
     expect((await withDefault("1")).calls).toBe(2);
     expect(events.some((event) => event.outcome === "serializer-mismatch")).toBe(true);
+    // The foreign entry was dropped, so the rewrite must land and the next call
+    // is a hit — not an endless recompute stuck on a stale compare-and-set.
+    expect((await withDefault("1")).calls).toBe(2);
+    expect(cache.stats().hits).toBeGreaterThanOrEqual(1);
     await cache.dispose();
   });
 

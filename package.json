@@ -1,6 +1,6 @@
 {
   "name": "rsc-cache",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Persistent, tag-invalidated caching layer for React Server Components. Framework-agnostic, TypeScript-first, zero runtime dependencies.",
   "keywords": [
     "react",

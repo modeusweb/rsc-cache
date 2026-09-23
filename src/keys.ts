@@ -111,10 +111,22 @@ function enforceMaxLength(key: string, maxKeyLength: number): string {
   if (key.length <= maxKeyLength) {
     return key;
   }
-  // Keep the structural head readable and replace the variable tail with a hash.
+  // Keep as much of the structural head readable as fits, and replace the rest
+  // with a hash of the *whole* key. The limit is a hard guarantee: even when
+  // the head alone exceeds the budget the result is trimmed below `maxKeyLength`.
+  const hash = hashValue(key, DEFAULT_HASH_LENGTH);
+  const suffixLength = hash.length + 2; // ":" + "h" + hash
+  if (suffixLength >= maxKeyLength) {
+    // Pathological budget (min supported is 32): the hash alone carries the key.
+    const shortened = hashValue(key, Math.max(4, maxKeyLength - 1));
+    return `h${shortened}`.slice(0, maxKeyLength);
+  }
   const lastSeparator = key.lastIndexOf(":");
-  const head = lastSeparator === -1 ? key : key.slice(0, lastSeparator);
-  return `${head}:h${hashValue(key, DEFAULT_HASH_LENGTH)}`;
+  const head = lastSeparator === -1 ? "" : key.slice(0, lastSeparator);
+  const headBudget = maxKeyLength - suffixLength;
+  const trimmedHead = head.length <= headBudget ? head : head.slice(0, headBudget);
+  const candidate = `${trimmedHead}:h${hash}`;
+  return candidate.length <= maxKeyLength ? candidate : candidate.slice(0, maxKeyLength);
 }
 
 /** Entry key derived from a hashed payload (scope + arguments). */

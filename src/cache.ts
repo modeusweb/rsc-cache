@@ -19,8 +19,7 @@
  * ```
  */
 
-import { getCache } from "./global.js";
-import { registerCache, registeredCaches, resetCache } from "./global.js";
+import { getCache, registerCache, registeredCaches, resetCache } from "./global.js";
 import type { AnyFunction, CacheOptions, CacheInstance, CachedFunction } from "./types.js";
 
 /** Wraps a function with request deduplication + persistent caching. */

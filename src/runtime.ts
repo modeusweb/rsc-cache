@@ -446,6 +446,10 @@ export class CacheRuntime {
         },
         info,
       );
+      // The stored entry is unusable under the configured serializer: drop it,
+      // otherwise the follow-up compare-and-set (observedRevision = null) would
+      // never match the existing record and the key could never be recached.
+      await this.silentDelete(plan.key);
       return { ok: false };
     }
 
@@ -1446,7 +1450,9 @@ export class CacheRuntime {
   ): Promise<
     { ok: true; entry: CacheEntry; value: unknown } | { ok: false; entry: CacheEntry | null }
   > {
-    const entry = await this.storage.get(storageKey);
+    const entry = await withTimeout(this.storage.get(storageKey), this.timeouts.read, {
+      name: "cache storage read",
+    });
     if (!entry || !isValidEntry(entry)) {
       return { ok: false, entry: null };
     }
@@ -1580,7 +1586,9 @@ export class CacheRuntime {
   async rawDelete(key: string, options: { namespace?: string } = {}): Promise<boolean> {
     const namespace = options.namespace ?? this.namespace;
     const storageKey = this.storageKeyFor(key, namespace);
-    await this.storage.delete(storageKey);
+    await withTimeout(this.storage.delete(storageKey), this.timeouts.write, {
+      name: "cache storage delete",
+    });
     this.stats.increment("deletes");
     this.emitRaw("delete", storageKey, { outcome: "deleted" });
     return true;
@@ -1589,7 +1597,9 @@ export class CacheRuntime {
   async rawHas(key: string, options: { namespace?: string } = {}): Promise<boolean> {
     const namespace = options.namespace ?? this.namespace;
     const storageKey = this.storageKeyFor(key, namespace);
-    return this.storage.has(storageKey);
+    return withTimeout(this.storage.has(storageKey), this.timeouts.read, {
+      name: "cache storage has",
+    });
   }
 
   /* ---------------------------------------------------------------------- */

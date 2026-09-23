@@ -42,6 +42,21 @@ describe("redis storage", () => {
     expect(await storage.get("k3")).not.toBeNull();
   });
 
+  it("drops stale tag memberships when an entry is rewritten without tags", async () => {
+    for (const atomic of [true, false]) {
+      const client = createFakeRedisClient({ withEval: atomic });
+      const storage = createRedisStorage({ client, atomic });
+
+      await storage.set("k", makeEntry("a"));
+      await storage.addTags!("k", ["old-tag"]);
+      // Rewrite without tags: the entry must leave the old tag index...
+      await storage.set("k", makeEntry("b", { revision: 2 }));
+      // ...so invalidating the old tag must not delete the entry anymore.
+      await storage.invalidateTag!("old-tag");
+      expect(await storage.get("k"), `atomic=${atomic}`).not.toBeNull();
+    }
+  });
+
   it("supports the non-atomic (no eval) path", async () => {
     const client = createFakeRedisClient({ withEval: false });
     const storage = createRedisStorage({ client, atomic: false });

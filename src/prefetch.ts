@@ -43,11 +43,18 @@ export async function prefetchDetailed<F extends AnyFunction>(
   ...args: Parameters<F>
 ): Promise<PrefetchResult<Awaited<ReturnType<F>>>> {
   const handle = cachedFn as CachedFunction<F>;
-  const existing = await handle.instance.get<Awaited<ReturnType<F>>>(handle.key(...args), {
+  const storageKey = handle.key(...args);
+  const existing = await handle.instance.get<Awaited<ReturnType<F>>>(storageKey, {
     allowStale: true,
   });
   if (existing !== undefined) {
     return { value: existing, hit: true, source: "cache" };
+  }
+  // `get()` returns `undefined` both for a miss and for a stored `undefined`
+  // (`cacheNull: true`); `has()` disambiguates so warming dashboards do not
+  // re-run the source for entries that are already stored.
+  if (await handle.instance.has(storageKey)) {
+    return { value: undefined as unknown as Awaited<ReturnType<F>>, hit: true, source: "cache" };
   }
   const value = await prefetch(cachedFn, ...args);
   return { value, hit: false, source: "source" };

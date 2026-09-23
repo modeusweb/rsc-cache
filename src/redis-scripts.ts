@@ -166,8 +166,13 @@ export const INVALIDATE_TAG_SCRIPT: RedisScript = {
   name: "rsc-cache-invalidate-tag",
   source: `
 local members = redis.call('SMEMBERS', KEYS[1])
-if #members > 0 then
-  redis.call('DEL', unpack(members))
+-- Batched to stay well below the Lua C-stack argument limit (~8000).
+for i = 1, #members, 500 do
+  local batch = {}
+  for j = i, math.min(i + 499, #members) do
+    batch[#batch + 1] = members[j]
+  end
+  redis.call('DEL', unpack(batch))
 end
 redis.call('DEL', KEYS[1])
 return #members
@@ -175,8 +180,8 @@ return #members
   simulate: (ctx, keys) => {
     const tagKey = keys[0] as string;
     const members = ctx.smembers(tagKey);
-    if (members.length > 0) {
-      ctx.del(...members);
+    for (let i = 0; i < members.length; i += 500) {
+      ctx.del(...members.slice(i, i + 500));
     }
     ctx.del(tagKey);
     return members.length;

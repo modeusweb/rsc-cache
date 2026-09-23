@@ -101,8 +101,13 @@ describe("key generation", () => {
       maxKeyLength: 120,
     });
     const key = long.key("x");
-    expect(key.length).toBeLessThanOrEqual(200);
+    expect(key.length).toBeLessThanOrEqual(120);
     expect(key).not.toContain("yyy");
+
+    // The limit is a hard guarantee, even at the minimum (32) where the
+    // structural head alone is already longer than the budget.
+    const minimal = cache.cache(async (id: string) => id, { ttl: "1m", maxKeyLength: 32 });
+    expect(minimal.key("z".repeat(400)).length).toBeLessThanOrEqual(32);
     await cache.dispose();
   });
 

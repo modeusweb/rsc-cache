@@ -214,7 +214,7 @@ export function createRedisStorage(options: RedisStorageOptions): RedisStorage {
       expectedRevision === "-" ? "-" : expectedRevision === null ? "" : String(expectedRevision);
 
     if (hasEval) {
-      const keys = [key, useKeyIndex ? indexKey() : "", tags.length > 0 ? tagsOfKey(key) : ""];
+      const keys = [key, useKeyIndex ? indexKey() : "", tagsOfKey(key)];
       for (const tag of tags) {
         keys.push(tagIndexKey(tag, { ...(options.namespace ? { namespace: options.namespace } : {}) }));
       }
@@ -240,27 +240,34 @@ export function createRedisStorage(options: RedisStorageOptions): RedisStorage {
     } else {
       await client.set(key, payload);
     }
-    if (tags.length > 0) {
-      const previous = await readTagRefs(key);
-      for (const tagKey of previous) {
-        counters.srem += 1;
-        await client.srem(tagKey, key);
-      }
-      const refs: string[] = [];
-      for (const tag of tags) {
-        const tagKey = tagIndexKey(tag, {
-          ...(options.namespace ? { namespace: options.namespace } : {}),
-        });
-        counters.sadd += 1;
-        await client.sadd(tagKey, key);
-        refs.push(tagKey);
-      }
-      if (refs.length > 0) {
-        counters.sadd += 1;
-        await client.sadd(tagsOfKey(key), refs);
-        if (ttlMs !== undefined && client.pexpire) {
-          await client.pexpire(tagsOfKey(key), Math.max(1, Math.round(ttlMs)));
-        }
+    // Reconcile tag bookkeeping on every write (mirrors SET_ENTRY_SCRIPT):
+    // leave every tag index recorded for this key, then register the new set.
+    // This must also run when the new entry carries no tags — otherwise a
+    // rewrite would leave a stale membership behind and `invalidateTag` would
+    // keep deleting an entry that no longer has the tag.
+    const previous = await readTagRefs(key);
+    for (const tagKey of previous) {
+      counters.srem += 1;
+      await client.srem(tagKey, key);
+    }
+    if (previous.length > 0) {
+      counters.srem += 1;
+      await client.srem(tagsOfKey(key), previous);
+    }
+    const refs: string[] = [];
+    for (const tag of tags) {
+      const tagKey = tagIndexKey(tag, {
+        ...(options.namespace ? { namespace: options.namespace } : {}),
+      });
+      counters.sadd += 1;
+      await client.sadd(tagKey, key);
+      refs.push(tagKey);
+    }
+    if (refs.length > 0) {
+      counters.sadd += 1;
+      await client.sadd(tagsOfKey(key), refs);
+      if (ttlMs !== undefined && client.pexpire) {
+        await client.pexpire(tagsOfKey(key), Math.max(1, Math.round(ttlMs)));
       }
     }
     if (useKeyIndex) {
@@ -381,8 +388,10 @@ export function createRedisStorage(options: RedisStorageOptions): RedisStorage {
         await client.del(keys.slice(i, i + batchSize));
       }
       if (useKeyIndex) {
-        counters.srem += 1;
-        await client.srem(indexKey(), [...keys]);
+        for (let i = 0; i < keys.length; i += batchSize) {
+          counters.srem += 1;
+          await client.srem(indexKey(), keys.slice(i, i + batchSize));
+        }
       }
     },
 
